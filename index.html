@@ -3,89 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Terminal CinéScan</title>
+    <title>CinéScan Terminal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;700&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; background: #000; color: white; height: 100vh; overflow: hidden; }
-        .font-cinema { font-family: 'Barlow Condensed', sans-serif; }
-
-        /* Viseur de scan style "Appareil Pro" */
-        .scanner-frame { position: relative; width: 280px; height: 280px; }
-        .corner { position: absolute; width: 40px; height: 40px; border-color: #ff0000; border-width: 6px; z-index: 50; }
-        .top-l { top: -10px; left: -10px; border-top-style: solid; border-left-style: solid; border-radius: 4px 0 0 0; }
-        .top-r { top: -10px; right: -10px; border-top-style: solid; border-right-style: solid; border-radius: 0 4px 0 0; }
-        .bot-l { bottom: -10px; left: -10px; border-bottom-style: solid; border-left-style: solid; border-radius: 0 0 0 4px; }
-        .bot-r { bottom: -10px; right: -10px; border-bottom-style: solid; border-right-style: solid; border-radius: 0 0 4px 0; }
-
-        /* Ligne laser fine */
-        .laser { position: absolute; width: 100%; height: 2px; background: #ff0000; box-shadow: 0 0 15px #ff0000; animation: move 3s infinite alternate; z-index: 40; }
-        @keyframes move { from { top: 0% } to { top: 100% } }
-
+        body { background: #000; color: #fff; font-family: ui-sans-serif, system-ui, sans-serif; height: 100vh; overflow: hidden; }
         #reader video { object-fit: cover !important; }
         #reader__dashboard { display: none !important; }
+        #reader__camera_selection { background: #1f2937; color: white; padding: 5px; border-radius: 5px; margin-top: 10px; }
+        .log-item { border-left: 3px solid #374151; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="flex flex-col">
 
-    <div class="bg-zinc-900 border-b border-white/10 p-5 flex justify-between items-center">
+    <header class="p-4 bg-zinc-900 flex justify-between items-center border-b border-white/5">
         <div>
-            <h1 class="font-cinema text-2xl tracking-tighter leading-none">TERMINAL <span class="text-red-600">A1</span></h1>
-            <p class="text-[9px] font-bold opacity-40 uppercase tracking-widest mt-1">Secteur : Entrée Principale</p>
+            <h1 class="font-bold text-sm tracking-widest uppercase">Scanner <span class="text-red-500">Actif</span></h1>
+            <p class="text-[10px] opacity-50">Total Scans: <span id="totalCount" class="text-white font-bold">0</span></p>
         </div>
-        <div class="flex gap-3">
-            <div class="bg-black/50 border border-white/10 rounded-lg p-2 text-center min-w-[60px]">
-                <p class="text-[8px] opacity-50 uppercase">Batterie</p>
-                <p class="text-xs font-bold text-green-500">98%</p>
+        <button onclick="toggleSettings()" class="bg-zinc-800 p-2 rounded-lg text-xs font-bold border border-white/10 uppercase">Menu</button>
+    </header>
+
+    <div class="relative flex-none h-2/3 bg-black flex items-center justify-center p-4">
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div class="w-64 h-64 border-2 border-white/20 rounded-3xl relative">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-900 px-3 py-1 text-[8px] font-black text-red-500 border border-red-500/50 rounded uppercase">Zone de lecture</div>
             </div>
+        </div>
+        <div id="reader" class="w-full h-full rounded-2xl overflow-hidden shadow-2xl"></div>
+    </div>
+
+    <div class="flex-1 bg-zinc-950 p-4 overflow-hidden flex flex-col">
+        <h2 class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3">Derniers passages</h2>
+        <div id="historyList" class="flex-1 overflow-y-auto space-y-2">
+            <p id="emptyMsg" class="text-[10px] text-gray-600 italic">Aucun scan enregistré pour le moment.</p>
         </div>
     </div>
 
-    <main class="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-900 to-black">
-        <div class="scanner-frame">
-            <div class="corner top-l"></div><div class="corner top-r"></div>
-            <div class="corner bot-l"></div><div class="corner bot-r"></div>
-            <div class="laser"></div>
-            <div id="reader" class="w-full h-full rounded-lg overflow-hidden border border-white/5"></div>
-        </div>
-        
-        <p class="mt-10 text-[10px] font-bold text-white/30 uppercase tracking-[0.5em] animate-pulse">Scan en cours...</p>
-    </main>
-
-    <div id="result" class="fixed inset-x-0 bottom-0 z-[100] transform translate-y-full transition-transform duration-300">
-        <div id="statusBg" class="p-8 rounded-t-[40px] shadow-2xl border-t border-white/20">
-            <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6"></div>
-            <div class="flex items-center gap-6">
-                <div id="statusIcon" class="text-5xl"></div>
-                <div>
-                    <h2 id="statusText" class="font-cinema text-4xl uppercase leading-none"></h2>
-                    <p id="movieTitle" class="text-lg font-bold text-white mt-1 uppercase"></p>
-                </div>
-            </div>
-            <div class="mt-8 grid grid-cols-2 gap-4">
-                <div class="bg-black/20 p-3 rounded-xl border border-white/5">
-                    <p class="text-[8px] opacity-50 uppercase">Zone</p>
-                    <p class="text-xs font-bold">SALLE 04</p>
-                </div>
-                <div class="bg-black/20 p-3 rounded-xl border border-white/5 text-right">
-                    <p class="text-[8px] opacity-50 uppercase">Heure</p>
-                    <p id="scanTime" class="text-xs font-bold"></p>
-                </div>
-            </div>
+    <div id="resultOverlay" class="fixed inset-0 z-[100] hidden items-center justify-center p-6 backdrop-blur-md">
+        <div id="statusCard" class="w-full max-w-sm rounded-[32px] p-8 flex flex-col items-center text-center shadow-2xl transition-all border-4">
+            <div id="statusIcon" class="text-6xl mb-4"></div>
+            <h3 id="statusText" class="text-3xl font-black uppercase italic mb-2"></h3>
+            <p id="movieName" class="text-lg font-bold text-white uppercase"></p>
+            <div class="mt-6 w-full h-px bg-white/20"></div>
+            <p id="ticketId" class="mt-4 text-[9px] font-mono opacity-50"></p>
         </div>
     </div>
 
-    <div class="bg-zinc-900 p-6 grid grid-cols-2 gap-4 border-t border-white/10">
-        <button class="bg-zinc-800 p-4 rounded-2xl flex items-center justify-center gap-3 border border-white/5">
-            <span class="text-xl">🔦</span>
-            <span class="text-[10px] font-bold uppercase">Flash</span>
-        </button>
-        <button onclick="location.reload()" class="bg-zinc-800 p-4 rounded-2xl flex items-center justify-center gap-3 border border-white/5">
-            <span class="text-xl">🔄</span>
-            <span class="text-[10px] font-bold uppercase">Reset</span>
-        </button>
+    <div id="settingsPanel" class="fixed inset-0 z-[110] bg-zinc-950 p-6 hidden flex-col">
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-xl font-black uppercase">Réglages App</h2>
+            <button onclick="toggleSettings()" class="text-3xl">&times;</button>
+        </div>
+        <div class="space-y-4">
+            <button onclick="clearHistory()" class="w-full bg-red-600/20 text-red-500 py-4 rounded-2xl font-bold uppercase text-xs border border-red-500/30 text-center">Réinitialiser le compteur</button>
+            <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center">
+                <span class="text-sm font-bold uppercase">Flash Automatique</span>
+                <div class="w-12 h-6 bg-zinc-800 rounded-full"></div>
+            </div>
+        </div>
     </div>
 
     <audio id="sndOk" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
@@ -93,48 +70,81 @@
 
     <script>
         const API_URL = "https://sheetdb.io/api/v1/ffd07sknkm202";
-        let html5Qr;
+        let scanner;
+        let count = 0;
+
+        function toggleSettings() {
+            const p = document.getElementById('settingsPanel');
+            p.classList.toggle('hidden');
+            p.classList.toggle('flex');
+        }
+
+        function clearHistory() {
+            count = 0;
+            document.getElementById('totalCount').innerText = count;
+            document.getElementById('historyList').innerHTML = '<p id="emptyMsg" class="text-[10px] text-gray-600 italic">Aucun scan enregistré.</p>';
+            toggleSettings();
+        }
+
+        function addToHistory(movie) {
+            document.getElementById('emptyMsg')?.remove();
+            const list = document.getElementById('historyList');
+            const item = document.createElement('div');
+            item.className = "log-item bg-white/5 p-3 rounded-lg flex justify-between items-center";
+            item.innerHTML = `
+                <span class="text-[11px] font-bold uppercase truncate w-40 text-white">${movie}</span>
+                <span class="text-[9px] opacity-40 font-mono">${new Date().toLocaleTimeString()}</span>
+            `;
+            list.prepend(item);
+            count++;
+            document.getElementById('totalCount').innerText = count;
+        }
 
         async function onScan(id) {
-            html5Qr.pause();
-            const resBox = document.getElementById('result');
-            const bg = document.getElementById('statusBg');
-            const txt = document.getElementById('statusText');
-            const movie = document.getElementById('movieTitle');
+            scanner.pause();
+            const overlay = document.getElementById('resultOverlay');
+            const card = document.getElementById('statusCard');
+            const statusText = document.getElementById('statusText');
+            const movieText = document.getElementById('movieName');
             const icon = document.getElementById('statusIcon');
-            
+            const tid = document.getElementById('ticketId');
+
             try {
                 const response = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(id)}`);
                 const data = await response.json();
 
-                resBox.classList.remove('translate-y-full');
-                document.getElementById('scanTime').innerText = new Date().toLocaleTimeString();
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+                tid.innerText = id;
 
                 if (data.length > 0 && data[0].status === "VALIDE") {
                     document.getElementById('sndOk').play();
-                    bg.className = "p-8 rounded-t-[40px] shadow-2xl border-t border-white/20 bg-green-600";
-                    txt.innerText = "Ticket Valide";
-                    movie.innerText = data[0].movie;
+                    card.className = "w-full max-w-sm rounded-[32px] p-8 flex flex-col items-center text-center shadow-2xl transition-all border-4 bg-zinc-900 border-green-500";
+                    statusText.innerText = "Autorisé";
+                    statusText.className = "text-3xl font-black uppercase text-green-500 mb-2 italic";
+                    movieText.innerText = data[0].movie;
                     icon.innerText = "✅";
-                    if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                    addToHistory(data[0].movie);
                 } else {
                     document.getElementById('sndNo').play();
-                    bg.className = "p-8 rounded-t-[40px] shadow-2xl border-t border-white/20 bg-red-600";
-                    txt.innerText = "Invalide";
-                    movie.innerText = "Accès Refusé";
+                    card.className = "w-full max-w-sm rounded-[32px] p-8 flex flex-col items-center text-center shadow-2xl transition-all border-4 bg-zinc-900 border-red-500";
+                    statusText.innerText = "Refusé";
+                    statusText.className = "text-3xl font-black uppercase text-red-500 mb-2 italic";
+                    movieText.innerText = "Billet non reconnu";
                     icon.innerText = "❌";
                 }
-            } catch (e) { html5Qr.resume(); }
+            } catch (e) { scanner.resume(); }
 
             setTimeout(() => {
-                resBox.classList.add('translate-y-full');
-                html5Qr.resume();
-            }, 4000);
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+                scanner.resume();
+            }, 3000);
         }
 
         window.onload = () => {
-            html5Qr = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 280 });
-            html5Qr.render(onScan);
+            scanner = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 250 });
+            scanner.render(onScan);
         };
     </script>
 </body>
