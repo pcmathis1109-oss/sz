@@ -7,125 +7,135 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        body { font-family: 'Orbitron', sans-serif; background: #000; color: #fff; overflow: hidden; height: 100vh; }
         
-        body { font-family: 'Orbitron', sans-serif; background: #000; overflow: hidden; }
-        
-        /* Animation du laser de scan */
-        @keyframes scan-moving { 0% { top: 0% } 100% { top: 100% } }
-        .laser { animation: scan-moving 2s linear infinite; background: linear-gradient(to bottom, transparent, #ff0000, transparent); height: 4px; position: absolute; width: 100%; z-index: 30; box-shadow: 0 0 15px #ff0000; }
+        /* Scanner Laser */
+        .laser-line {
+            position: absolute; width: 100%; height: 3px; background: rgba(255, 0, 0, 0.8);
+            box-shadow: 0 0 15px 5px rgba(255, 0, 0, 0.5); z-index: 10;
+            animation: scanMove 2.5s linear infinite;
+        }
+        @keyframes scanMove { 0% { top: 0%; } 100% { top: 100%; } }
 
-        /* Effet de grille sur l'écran */
-        .grid-overlay { background-image: radial-gradient(circle, #ffffff10 1px, transparent 1px); background-size: 20px 20px; }
-        
+        /* Masquage des éléments inutiles de la librairie */
         #reader__dashboard { display: none !important; }
-        #reader video { object-fit: cover !important; filter: contrast(1.2) brightness(1.1); }
+        #reader video { object-fit: cover !important; filter: sepia(1) hue-rotate(-50deg) brightness(1.2); }
         
-        .status-pulse { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .log-entry { border-left: 2px solid #ef4444; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
     </style>
 </head>
-<body class="text-white h-screen flex flex-col">
+<body class="flex flex-col">
 
-    <div class="fixed inset-0 pointer-events-none z-40 border-[20px] border-white/5"></div>
-
-    <header class="p-8 flex justify-between items-start z-50">
+    <div class="p-6 flex justify-between items-start z-50 bg-gradient-to-b from-black to-transparent">
         <div>
-            <div class="flex items-center gap-2 mb-1">
-                <span class="w-3 h-3 bg-red-600 rounded-full status-pulse"></span>
-                <h1 class="text-xl font-black tracking-[0.3em] uppercase">CinéScan <span class="text-red-600">PRO</span></h1>
-            </div>
-            <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Terminal ID : CS-892-X</p>
+            <h1 class="text-xl font-black tracking-tighter text-red-600">TERMINAL <span class="text-white">v4.0</span></h1>
+            <p id="status-text" class="text-[8px] text-green-500 font-bold uppercase tracking-[0.3em] animate-pulse">Système Online</p>
         </div>
         <div class="text-right">
-            <div id="clock" class="text-sm font-bold text-red-600 mb-1"></div>
-            <div class="text-[8px] text-green-500 border border-green-500/30 px-2 py-0.5 rounded-full bg-green-500/5">SYNC : LIVE CLOUD</div>
-        </div>
-    </header>
-
-    <main class="flex-1 relative flex items-center justify-center">
-        <div class="relative w-72 h-72">
-            <div class="absolute -top-4 -left-4 w-12 h-12 border-t-2 border-l-2 border-red-600 z-50"></div>
-            <div class="absolute -top-4 -right-4 w-12 h-12 border-t-2 border-r-2 border-red-600 z-50"></div>
-            <div class="absolute -bottom-4 -left-4 w-12 h-12 border-b-2 border-l-2 border-red-600 z-50"></div>
-            <div class="absolute -bottom-4 -right-4 w-12 h-12 border-b-2 border-r-2 border-red-600 z-50"></div>
-            
-            <div id="reader" class="w-full h-full rounded-2xl overflow-hidden grayscale contrast-125 bg-zinc-900 border border-white/10 relative">
-                <div class="laser"></div>
-            </div>
-        </div>
-    </main>
-
-    <div id="resultOverlay" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center backdrop-blur-md">
-        <div id="resultCard" class="w-[85%] max-w-sm p-8 rounded-3xl border-2 transition-transform duration-500 scale-90">
-            <div class="text-[10px] uppercase tracking-widest font-bold mb-4 opacity-50">Résultat du contrôle</div>
-            <h2 id="resultTitle" class="text-4xl font-black italic mb-2"></h2>
-            <div class="h-px bg-white/20 my-6"></div>
-            <div class="space-y-4">
-                <div>
-                    <p class="text-[8px] uppercase opacity-50">Film identifié</p>
-                    <p id="resultMovie" class="text-lg font-bold uppercase"></p>
-                </div>
-                <div>
-                    <p class="text-[8px] uppercase opacity-50">Ticket ID</p>
-                    <p id="resultId" class="text-xs font-mono"></p>
-                </div>
-            </div>
+            <div id="clock" class="text-lg font-bold">00:00:00</div>
+            <div class="text-[7px] opacity-50 uppercase">Auth: Admin_Root</div>
         </div>
     </div>
 
-    <audio id="sndOk" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
-    <audio id="sndNo" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
+    <main class="flex-1 relative flex flex-col items-center justify-center px-6">
+        <div class="relative w-full aspect-square max-w-[320px]">
+            <div class="absolute -top-2 -left-2 w-10 h-10 border-t-4 border-l-4 border-red-600 z-20"></div>
+            <div class="absolute -top-2 -right-2 w-10 h-10 border-t-4 border-r-4 border-red-600 z-20"></div>
+            <div class="absolute -bottom-2 -left-2 w-10 h-10 border-b-4 border-l-4 border-red-600 z-20"></div>
+            <div class="absolute -bottom-2 -right-2 w-10 h-10 border-b-4 border-r-4 border-red-600 z-20"></div>
+            
+            <div id="reader" class="w-full h-full rounded-sm overflow-hidden bg-zinc-900 border border-white/5 relative">
+                <div class="laser-line"></div>
+            </div>
+        </div>
+
+        <div id="info-box" class="mt-8 w-full max-w-[320px] bg-white/5 border border-white/10 p-4 rounded-lg hidden">
+            <p class="text-[8px] uppercase text-red-500 font-bold mb-1">Dernière Détection :</p>
+            <h2 id="detected-movie" class="text-lg font-black uppercase truncate">---</h2>
+        </div>
+    </main>
+
+    <div class="h-32 bg-zinc-950 border-t border-white/10 p-4 overflow-y-auto">
+        <div class="text-[8px] text-gray-500 uppercase font-bold mb-2">Historique des flux :</div>
+        <div id="scan-logs" class="space-y-2 text-[10px] font-mono">
+            <div class="text-gray-600 italic">[SYSTEM] Initialisation du scanner...</div>
+        </div>
+    </div>
+
+    <div id="overlay" class="fixed inset-0 z-[100] flex items-center justify-center hidden backdrop-blur-md">
+        <div id="card" class="w-4/5 p-8 rounded-2xl border-4 flex flex-col items-center text-center transform transition-all duration-300 scale-50">
+            <div id="icon" class="text-6xl mb-4"></div>
+            <h2 id="msg" class="text-3xl font-black italic mb-2"></h2>
+            <p id="movie" class="text-sm font-bold opacity-80 uppercase"></p>
+        </div>
+    </div>
+
+    <audio id="s-ok" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+    <audio id="s-no" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
     <script>
         const API_URL = "https://sheetdb.io/api/v1/ffd07sknkm202";
-        let scanner;
+        let html5Qr;
 
-        // Horloge temps réel
-        setInterval(() => {
+        function updateClock() {
             const now = new Date();
-            document.getElementById('clock').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0') + ":" + now.getSeconds().toString().padStart(2, '0');
-        }, 1000);
+            document.getElementById('clock').innerText = now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
 
-        async function handleScan(decodedText) {
-            scanner.pause();
-            const overlay = document.getElementById('resultOverlay');
-            const card = document.getElementById('resultCard');
+        function addLog(msg, type) {
+            const logs = document.getElementById('scan-logs');
+            const color = type === 'ok' ? 'text-green-400' : 'text-red-500';
+            const entry = document.createElement('div');
+            entry.className = "log-entry pl-2 " + color;
+            entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logs.prepend(entry);
+        }
+
+        async function onScan(id) {
+            html5Qr.pause();
+            const ov = document.getElementById('overlay');
+            const cr = document.getElementById('card');
             
             try {
-                const response = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(decodedText)}`);
-                const data = await response.json();
-
-                overlay.classList.remove('hidden');
-                setTimeout(() => card.classList.remove('scale-90'), 50);
+                const res = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(id)}`);
+                const data = await res.json();
+                
+                ov.classList.remove('hidden');
+                setTimeout(() => cr.classList.remove('scale-50'), 50);
 
                 if (data.length > 0 && data[0].status === "VALIDE") {
-                    // SUCCÈS
-                    card.className = "w-[85%] max-w-sm p-8 rounded-3xl border-2 bg-green-950/90 border-green-400 text-green-400 shadow-[0_0_50px_rgba(34,197,94,0.3)]";
-                    document.getElementById('resultTitle').innerText = "AUTORISÉ";
-                    document.getElementById('resultMovie').innerText = data[0].movie;
-                    document.getElementById('resultId').innerText = decodedText;
-                    document.getElementById('sndOk').play();
+                    document.getElementById('s-ok').play();
+                    cr.className = "w-4/5 p-8 rounded-2xl border-4 bg-green-900/80 border-green-400 text-green-400";
+                    document.getElementById('msg').innerText = "VALIDE";
+                    document.getElementById('movie').innerText = data[0].movie;
+                    document.getElementById('icon').innerText = "✓";
+                    document.getElementById('detected-movie').innerText = data[0].movie;
+                    document.getElementById('info-box').classList.remove('hidden');
+                    addLog("ACCÈS AUTORISÉ : " + data[0].movie, 'ok');
                 } else {
-                    // ÉCHEC
-                    card.className = "w-[85%] max-w-sm p-8 rounded-3xl border-2 bg-red-950/90 border-red-500 text-red-500 shadow-[0_0_50px_rgba(239,68,68,0.3)]";
-                    document.getElementById('resultTitle').innerText = "REFUSÉ";
-                    document.getElementById('resultMovie').innerText = "BILLET INCONNU";
-                    document.getElementById('resultId').innerText = "INVALID_HASH";
-                    document.getElementById('sndNo').play();
+                    document.getElementById('s-no').play();
+                    cr.className = "w-4/5 p-8 rounded-2xl border-4 bg-red-900/80 border-red-500 text-red-500";
+                    document.getElementById('msg').innerText = "REFUSÉ";
+                    document.getElementById('movie').innerText = "TICKET INCONNU";
+                    document.getElementById('icon').innerText = "✕";
+                    addLog("ALERTE : TICKET INVALIDE DÉTECTÉ", 'no');
                 }
-            } catch (e) { scanner.resume(); }
+            } catch (e) { html5Qr.resume(); }
 
             setTimeout(() => {
-                overlay.classList.add('hidden');
-                card.classList.add('scale-90');
-                scanner.resume();
-            }, 4000);
+                ov.classList.add('hidden');
+                cr.classList.add('scale-50');
+                html5Qr.resume();
+            }, 3000);
         }
 
         window.onload = () => {
-            scanner = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 250 });
-            scanner.render(handleScan);
+            html5Qr = new Html5QrcodeScanner("reader", { fps: 30, qrbox: 250 });
+            html5Qr.render(onScan);
+            addLog("Scanner prêt. En attente de détection...", 'ok');
         };
     </script>
 </body>
