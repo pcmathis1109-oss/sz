@@ -3,121 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CinéScan TERMINAL</title>
+    <title>Scanner de Contrôle Ciné</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root { --matrix-green: #00ff41; --bg-black: #050505; }
-        body { 
-            font-family: 'Consolas', 'Courier New', monospace; 
-            background-color: var(--bg-black); color: var(--matrix-green); 
-            margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
-        }
-
-        /* Console du haut */
-        #terminal-header { padding: 10px; border-bottom: 1px solid var(--matrix-green); font-size: 12px; background: #000; }
+        :root { --main-blue: #007aff; --success: #28a745; --terminal-green: #00ff41; --dark-bg: #121212; }
         
-        /* Zone Scanner */
-        .scan-zone { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; background: #000; }
-        #reader { width: 300px; height: 300px; border: 1px solid var(--matrix-green); }
-        .laser { position: absolute; width: 300px; height: 2px; background: var(--matrix-green); box-shadow: 0 0 15px var(--matrix-green); z-index: 10; animation: move 2s infinite linear; }
-        @keyframes move { 0% { top: calc(50% - 150px); } 100% { top: calc(50% + 150px); } }
-
-        /* Console de logs réels */
-        #real-logs { 
-            height: 150px; background: #000; border-top: 1px solid var(--matrix-green); 
-            padding: 10px; font-size: 11px; overflow-y: auto; color: #00ff41;
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #000; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh;
         }
-        .log-entry { margin-bottom: 3px; border-left: 3px solid var(--matrix-green); padding-left: 5px; }
-        .timestamp { color: #888; margin-right: 10px; }
 
-        /* Bouton */
+        /* Barre d'état du contrôleur */
+        .top-bar {
+            background: var(--dark-bg); padding: 15px; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .status-badge { background: #222; padding: 5px 10px; border-radius: 5px; font-size: 12px; border: 1px solid #444; }
+        .dot { height: 8px; width: 8px; background: orange; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+        /* Zone de visée */
+        .scan-area { flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; }
+        #reader { width: 80%; max-width: 320px; border-radius: 20px; overflow: hidden; border: 2px solid #333; }
+        
+        /* Bouton Start */
         #init-btn { 
-            position: absolute; z-index: 100; padding: 20px; background: var(--matrix-green); 
-            color: black; border: none; font-weight: bold; cursor: pointer;
+            position: absolute; padding: 20px 40px; background: var(--main-blue); 
+            color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px;
         }
 
-        /* Alerte Succès Rapide */
-        #flash { 
-            position: fixed; top:0; left:0; width:100%; height:100%; 
-            background: rgba(0,255,65,0.2); display:none; pointer-events: none; z-index: 200;
+        /* CONSOLE TECHNIQUE (Le code en bas) */
+        .terminal {
+            background: #000; height: 180px; border-top: 1px solid #333;
+            font-family: 'Consolas', 'Monaco', monospace; font-size: 11px;
+            padding: 10px; overflow-y: auto; color: var(--terminal-green);
+        }
+        .line { margin-bottom: 4px; border-left: 2px solid #222; padding-left: 8px; }
+        .time { color: #666; font-size: 9px; margin-right: 5px; }
+        .cmd { color: #fff; }
+
+        /* Overlay de succès */
+        #success-pop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(40, 167, 69, 0.9); display: none;
+            flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
         }
     </style>
 </head>
 <body>
 
-    <div id="terminal-header">
-        [ SYSTEM VERSION 1.0.4 ]<br>
-        [ STATUS: CONNECTED TO GOOGLE_API ]
+    <div class="top-bar">
+        <div><strong>CONTRÔLE ACCÈS</strong></div>
+        <div class="status-badge"><span id="dot-status" class="dot"></span> <span id="text-status">PRÊT</span></div>
     </div>
 
-    <div class="scan-zone">
-        <button id="init-btn">RUN CINEMATICKET.EXE</button>
+    <div class="scan-area">
+        <button id="init-btn">LANCER LE SCANNER</button>
         <div id="reader" style="display:none;"></div>
-        <div id="laser-line" class="laser" style="display:none;"></div>
     </div>
 
-    <div id="real-logs">
-        <div class="log-entry">> Initialisation du noyau...</div>
+    <div class="terminal" id="term-box">
+        <div class="line"><span class="time">18:45:01</span> [SYSTEM] Kernel CinéScan initialized.</div>
+        <div class="line"><span class="time">18:45:02</span> [NET] Waiting for hardware...</div>
     </div>
 
-    <div id="flash"></div>
+    <div id="success-pop">
+        <h1 style="font-size: 50px;">✅</h1>
+        <h2>TICKET VALIDE</h2>
+    </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQv5Pj1rnhQcBaerKsWCYateY_ZP793WuDO1QfNaiaLP_IcODG9pkmh1O7-BQegjTu/exec";
-        const logBox = document.getElementById('real-logs');
+        const term = document.getElementById('term-box');
 
-        function printLog(msg) {
+        function addTerminalLine(msg, isCode = false) {
             const now = new Date();
-            const time = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+            const time = now.toLocaleTimeString();
             const div = document.createElement('div');
-            div.className = "log-entry";
-            div.innerHTML = `<span class="timestamp">[${time}]</span> ${msg}`;
-            logBox.appendChild(div);
-            logBox.scrollTop = logBox.scrollHeight;
+            div.className = "line";
+            div.innerHTML = `<span class="time">${time}</span> ${isCode ? '<span class="cmd">' + msg + '</span>' : msg}`;
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
         }
 
         document.getElementById('init-btn').addEventListener('click', async () => {
             document.getElementById('init-btn').style.display = 'none';
             document.getElementById('reader').style.display = 'block';
-            document.getElementById('laser-line').style.display = 'block';
-            
-            printLog("Demande d'accès Hardware: CAMERA...");
+            addTerminalLine("GET /dev/camera0 HTTP/1.1", true);
             
             try {
-                const html5QrCode = new Html5Qrcode("reader");
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    { fps: 20, qrbox: 250 },
-                    (text) => executeTransfer(text)
-                );
-                printLog("Capteur optique : ONLINE");
+                const scanner = new Html5Qrcode("reader");
+                await scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (text) => processTicket(text));
+                addTerminalLine("CAMERA_STATE: ACTIVE_SUCCESS");
+                document.getElementById('dot-status').style.background = "#2ecc71";
+                document.getElementById('text-status').innerText = "EN LIGNE";
             } catch (e) {
-                printLog("ERREUR CRITIQUE: " + e);
+                addTerminalLine("FATAL_ERROR: " + e, true);
             }
         });
 
-        async function executeTransfer(ticketID) {
-            printLog("PAQUET DÉTECTÉ: " + ticketID);
+        async function processTicket(id) {
+            if (navigator.vibrate) navigator.vibrate(100);
             
-            // On flashe l'écran
-            document.getElementById('flash').style.display = 'block';
-            setTimeout(() => document.getElementById('flash').style.display = 'none', 200);
-
-            if (navigator.vibrate) navigator.vibrate(50);
-
-            printLog("REQUÊTE HTTP POST -> GOOGLE SHEETS...");
+            addTerminalLine(`SCAN_EVENT: ID_RAW="${id}"`, true);
+            addTerminalLine(`POST /api/sheets/v4/append?id=${id}`, true);
             
+            document.getElementById('dot-status').style.background = "orange";
             const start = Date.now();
-            
+
             try {
-                // Ici c'est le VRAI envoi
-                const response = await fetch(SCRIPT_URL + "?id=" + encodeURIComponent(ticketID));
-                const end = Date.now();
+                const response = await fetch(SCRIPT_URL + "?id=" + encodeURIComponent(id));
+                const delay = Date.now() - start;
                 
-                printLog(`TRANSMISSION RÉUSSIE (${end - start}ms)`);
-                printLog(`DATABASE_UPDATE: SUCCESS`);
+                addTerminalLine(`HTTP_RESPONSE: 200 OK (${delay}ms)`, true);
+                addTerminalLine(`JSON_RESULT: {"status":"written", "id":"${id}"}`, true);
+
+                // Affichage succès pro
+                document.getElementById('success-pop').style.display = 'flex';
+                setTimeout(() => { 
+                    document.getElementById('success-pop').style.display = 'none';
+                    document.getElementById('dot-status').style.background = "#2ecc71";
+                }, 1200);
+
             } catch (err) {
-                printLog("ERREUR RÉSEAU: ÉCHEC DE L'ENVOI");
+                addTerminalLine("NET_ERROR: Connection timed out", true);
             }
         }
     </script>
