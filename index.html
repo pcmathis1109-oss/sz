@@ -3,56 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CinéScan Terminal</title>
+    <title>Terminal CinéScan</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { background: #000; color: #fff; font-family: system-ui, sans-serif; height: 100vh; display: flex; flex-col; overflow: hidden; }
-        #reader video { object-fit: cover !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700&display=swap');
+        
+        body { background: #000; color: #fff; font-family: 'Roboto Condensed', sans-serif; height: 100vh; overflow: hidden; }
+        
+        /* Look industriel du scanner */
+        #reader video { object-fit: cover !important; filter: brightness(1.1) contrast(1.2); }
         #reader__dashboard { display: none !important; }
-        .drawer { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Animation laser rouge pro */
+        .laser { position: absolute; width: 100%; height: 3px; background: #ff0000; box-shadow: 0 0 15px #ff0000; z-index: 50; animation: scan 2.5s infinite alternate; }
+        @keyframes scan { from { top: 0% } to { top: 100% } }
+
+        .btn-industrial { background: #1a1a1a; border: 1px solid #333; transition: all 0.2s; }
+        .btn-industrial:active { background: #333; transform: scale(0.95); }
     </style>
 </head>
 <body class="flex flex-col">
 
-    <header class="p-5 bg-zinc-900 border-b border-white/10 flex justify-between items-center">
+    <header class="p-4 bg-zinc-900 border-b-2 border-red-600 flex justify-between items-center">
         <div>
-            <h1 class="font-black text-lg tracking-tighter uppercase">Terminal <span class="text-red-600">Pro</span></h1>
-            <p class="text-[9px] opacity-40 font-bold uppercase">Entrées : <span id="counter" class="text-white">0</span></p>
+            <h1 class="text-xl tracking-tighter uppercase leading-none">Terminal <span class="text-red-600">Scan A1</span></h1>
+            <p id="totalCount" class="text-[10px] text-zinc-500 font-bold mt-1 uppercase">Entrées : 0</p>
         </div>
-        <div class="flex gap-2">
-            <button onclick="toggleSettings()" class="bg-zinc-800 p-2 rounded-lg text-[10px] font-bold border border-white/5 uppercase">⚙️ Menu</button>
+        <div class="text-right">
+            <span id="clock" class="text-sm font-bold opacity-80">00:00:00</span>
         </div>
     </header>
 
-    <div class="relative flex-1 bg-black overflow-hidden">
-        <div id="reader" class="w-full h-full"></div>
-        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div class="w-64 h-64 border-2 border-red-600/30 rounded-3xl"></div>
+    <main class="flex-1 relative bg-black flex items-center justify-center p-6">
+        <div class="relative w-72 h-72 border-2 border-white/10 rounded-xl overflow-hidden shadow-2xl">
+            <div class="laser"></div>
+            <div id="reader" class="w-full h-full"></div>
+        </div>
+        
+        <div class="absolute w-80 h-80 pointer-events-none border border-white/5 rounded-3xl"></div>
+    </main>
+
+    <div class="h-32 bg-zinc-900/50 p-4 border-t border-white/10 overflow-hidden">
+        <h2 class="text-[9px] text-zinc-500 uppercase tracking-widest mb-2 font-black">Flux de contrôle</h2>
+        <div id="historyList" class="space-y-1 overflow-y-auto h-20 text-[11px]">
+            <p class="opacity-20 italic">En attente de scan...</p>
         </div>
     </div>
 
-    <div class="h-40 bg-zinc-950 border-t border-white/10 p-4">
-        <p class="text-[8px] font-black opacity-30 uppercase mb-3 tracking-widest">Journal des scans</p>
-        <div id="history" class="space-y-2 overflow-y-auto h-24">
-            <p id="noData" class="text-[10px] opacity-20 italic text-center mt-4">Aucun scan en mémoire</p>
-        </div>
-    </div>
+    <footer class="p-4 bg-zinc-900 grid grid-cols-2 gap-4">
+        <button onclick="toggleFlash()" class="btn-industrial py-4 rounded-xl flex flex-col items-center">
+            <span class="text-lg">🔦</span>
+            <span class="text-[9px] uppercase font-bold mt-1">Éclairage</span>
+        </button>
+        <button onclick="clearLogs()" class="btn-industrial py-4 rounded-xl flex flex-col items-center">
+            <span class="text-lg">🗑️</span>
+            <span class="text-[9px] uppercase font-bold mt-1">Reset</span>
+        </button>
+    </footer>
 
-    <div id="overlay" class="fixed inset-0 z-[100] hidden items-end justify-center">
-        <div id="statusCard" class="drawer translate-y-full w-full p-10 rounded-t-[40px] text-center border-t-2">
-            <h2 id="statusTitle" class="text-4xl font-black uppercase italic mb-2"></h2>
-            <p id="movieName" class="text-xl font-bold text-white uppercase"></p>
+    <div id="overlay" class="fixed inset-0 z-[100] hidden items-center justify-center p-8 backdrop-blur-xl">
+        <div id="card" class="w-full p-10 rounded-[40px] text-center shadow-2xl border-4 transform transition-all duration-300">
+            <div id="icon" class="text-7xl mb-4"></div>
+            <h2 id="msg" class="text-4xl font-black uppercase italic leading-none mb-2"></h2>
+            <p id="movie" class="text-lg font-bold opacity-90 uppercase tracking-tighter"></p>
         </div>
-    </div>
-
-    <div id="settings" class="fixed inset-0 z-[200] bg-black p-8 hidden flex-col">
-        <div class="flex justify-between items-center mb-10">
-            <h2 class="text-2xl font-black uppercase">Outils</h2>
-            <button onclick="toggleSettings()" class="text-4xl">&times;</button>
-        </div>
-        <button onclick="localStorage.clear(); location.reload();" class="w-full p-4 bg-red-600/20 text-red-500 rounded-xl font-bold uppercase text-xs border border-red-500/20">Vider la mémoire du terminal</button>
     </div>
 
     <audio id="sndOk" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
@@ -63,15 +79,21 @@
         let html5Qr;
         let count = 0;
 
-        function toggleSettings() {
-            const s = document.getElementById('settings');
-            s.classList.toggle('hidden'); s.classList.toggle('flex');
+        function updateClock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+
+        function clearLogs() {
+            count = 0;
+            document.getElementById('totalCount').innerText = "Entrées : 0";
+            document.getElementById('historyList').innerHTML = '<p class="opacity-20 italic">Historique effacé.</p>';
         }
 
         async function onScan(id) {
             html5Qr.pause();
             const ov = document.getElementById('overlay');
-            const card = document.getElementById('statusCard');
+            const cr = document.getElementById('card');
             
             try {
                 const res = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(id)}`);
@@ -79,33 +101,39 @@
                 
                 ov.classList.remove('hidden');
                 ov.classList.add('flex');
-                setTimeout(() => card.classList.remove('translate-y-full'), 10);
 
                 if (data.length > 0 && data[0].status === "VALIDE") {
                     document.getElementById('sndOk').play();
-                    card.className = "drawer w-full p-10 rounded-t-[40px] text-center border-t-2 bg-green-600 border-green-400";
-                    document.getElementById('statusTitle').innerText = "AUTORISÉ";
-                    document.getElementById('movieName').innerText = data[0].movie;
+                    // VIBRATION RÉELLE (1 vibration longue)
+                    if (navigator.vibrate) navigator.vibrate(200);
+
+                    cr.className = "w-full p-10 rounded-[40px] text-center shadow-2xl border-4 bg-green-600 border-green-400";
+                    document.getElementById('msg').innerText = "VALIDE";
+                    document.getElementById('movie').innerText = data[0].movie;
+                    document.getElementById('icon').innerText = "✅";
                     
-                    // Ajout à l'historique réel
-                    document.getElementById('noData')?.remove();
-                    const log = document.createElement('div');
-                    log.className = "flex justify-between bg-white/5 p-2 rounded text-[10px] border-l-2 border-green-500";
-                    log.innerHTML = `<span>${data[0].movie}</span><span class="opacity-30">${new Date().toLocaleTimeString()}</span>`;
-                    document.getElementById('history').prepend(log);
+                    // Update historique
                     count++;
-                    document.getElementById('counter').innerText = count;
+                    document.getElementById('totalCount').innerText = "Entrées : " + count;
+                    const h = document.getElementById('historyList');
+                    if(count === 1) h.innerHTML = "";
+                    h.innerHTML = `<div class='border-l-2 border-green-500 pl-2 mb-1 uppercase font-bold'>${data[0].movie}</div>` + h.innerHTML;
                 } else {
                     document.getElementById('sndNo').play();
-                    card.className = "drawer w-full p-10 rounded-t-[40px] text-center border-t-2 bg-red-600 border-red-400";
-                    document.getElementById('statusTitle').innerText = "REFUSÉ";
-                    document.getElementById('movieName').innerText = "TICKET INVALIDE";
+                    // VIBRATION RÉELLE (3 vibrations courtes d'erreur)
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+
+                    cr.className = "w-full p-10 rounded-[40px] text-center shadow-2xl border-4 bg-red-600 border-red-400";
+                    document.getElementById('msg').innerText = "REFUSÉ";
+                    document.getElementById('movie').innerText = "TICKET INVALIDE";
+                    document.getElementById('icon').innerText = "❌";
                 }
             } catch (e) { html5Qr.resume(); }
 
             setTimeout(() => {
-                card.classList.add('translate-y-full');
-                setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('flex'); html5Qr.resume(); }, 400);
+                ov.classList.add('hidden');
+                ov.classList.remove('flex');
+                html5Qr.resume();
             }, 3000);
         }
 
