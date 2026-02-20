@@ -3,153 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CinéScan Titanium</title>
+    <title>Terminal CinéScan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Syncopate:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;700&display=swap');
         
-        :root { --accent: #ff003c; --bg: #080808; }
-        body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: white; height: 100vh; overflow: hidden; }
-        .titre-app { font-family: 'Syncopate', sans-serif; }
+        body { font-family: 'Inter', sans-serif; background: #000; color: white; height: 100vh; overflow: hidden; }
+        .font-cinema { font-family: 'Barlow Condensed', sans-serif; }
 
-        /* Scanner Laser Haute Précision */
-        .scan-bar {
-            position: absolute; width: 100%; height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent), transparent);
-            box-shadow: 0 0 20px var(--accent);
-            animation: move 2s ease-in-out infinite; z-index: 20;
-        }
-        @keyframes move { 0%, 100% { top: 0% } 50% { top: 100% } }
+        /* Viseur de scan style "Appareil Pro" */
+        .scanner-frame { position: relative; width: 280px; height: 280px; }
+        .corner { position: absolute; width: 40px; height: 40px; border-color: #ff0000; border-width: 6px; z-index: 50; }
+        .top-l { top: -10px; left: -10px; border-top-style: solid; border-left-style: solid; border-radius: 4px 0 0 0; }
+        .top-r { top: -10px; right: -10px; border-top-style: solid; border-right-style: solid; border-radius: 0 4px 0 0; }
+        .bot-l { bottom: -10px; left: -10px; border-bottom-style: solid; border-left-style: solid; border-radius: 0 0 0 4px; }
+        .bot-r { bottom: -10px; right: -10px; border-bottom-style: solid; border-right-style: solid; border-radius: 0 0 4px 0; }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        /* Ligne laser fine */
+        .laser { position: absolute; width: 100%; height: 2px; background: #ff0000; box-shadow: 0 0 15px #ff0000; animation: move 3s infinite alternate; z-index: 40; }
+        @keyframes move { from { top: 0% } to { top: 100% } }
 
-        #reader video { object-fit: cover !important; filter: grayscale(0.5) contrast(1.2); }
+        #reader video { object-fit: cover !important; }
         #reader__dashboard { display: none !important; }
-        
-        .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
-<body class="flex flex-col p-4">
+<body class="flex flex-col">
 
-    <header class="flex justify-between items-center mb-6 pt-4">
+    <div class="bg-zinc-900 border-b border-white/10 p-5 flex justify-between items-center">
         <div>
-            <h1 class="titre-app text-xs tracking-[0.4em] text-white/50">CinéScan <span class="text-[#ff003c]">Titanium</span></h1>
-            <div class="flex items-center gap-2 mt-1">
-                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                <span id="node-id" class="text-[9px] font-mono opacity-40 uppercase">Node-829 / encrypted</span>
+            <h1 class="font-cinema text-2xl tracking-tighter leading-none">TERMINAL <span class="text-red-600">A1</span></h1>
+            <p class="text-[9px] font-bold opacity-40 uppercase tracking-widest mt-1">Secteur : Entrée Principale</p>
+        </div>
+        <div class="flex gap-3">
+            <div class="bg-black/50 border border-white/10 rounded-lg p-2 text-center min-w-[60px]">
+                <p class="text-[8px] opacity-50 uppercase">Batterie</p>
+                <p class="text-xs font-bold text-green-500">98%</p>
             </div>
         </div>
-        <button onclick="toggleSettings()" class="w-10 h-10 glass-panel rounded-full flex items-center justify-center">
-            <span class="text-lg">⚙️</span>
-        </button>
-    </header>
+    </div>
 
-    <div class="relative w-full aspect-square max-w-[340px] mx-auto mb-6">
-        <div class="absolute -top-1 -left-1 w-8 h-8 border-t-2 border-l-2 border-[#ff003c]"></div>
-        <div class="absolute -top-1 -right-1 w-8 h-8 border-t-2 border-r-2 border-[#ff003c]"></div>
-        <div class="absolute -bottom-1 -left-1 w-8 h-8 border-b-2 border-l-2 border-[#ff003c]"></div>
-        <div class="absolute -bottom-1 -right-1 w-8 h-8 border-b-2 border-r-2 border-[#ff003c]"></div>
+    <main class="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-900 to-black">
+        <div class="scanner-frame">
+            <div class="corner top-l"></div><div class="corner top-r"></div>
+            <div class="corner bot-l"></div><div class="corner bot-r"></div>
+            <div class="laser"></div>
+            <div id="reader" class="w-full h-full rounded-lg overflow-hidden border border-white/5"></div>
+        </div>
         
-        <div id="reader" class="w-full h-full overflow-hidden rounded-xl bg-black border border-white/5 relative">
-            <div class="scan-bar"></div>
-        </div>
-    </div>
+        <p class="mt-10 text-[10px] font-bold text-white/30 uppercase tracking-[0.5em] animate-pulse">Scan en cours...</p>
+    </main>
 
-    <div id="resultBox" class="glass-panel p-5 rounded-2xl mb-6 hidden animate-in slide-in-from-bottom duration-300">
-        <div class="flex justify-between items-start mb-2">
-            <span class="text-[9px] font-bold text-[#ff003c] uppercase tracking-widest">Validation Ticket</span>
-            <span class="text-[9px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full font-bold">VALIDE</span>
-        </div>
-        <h2 id="movieTitle" class="text-2xl font-bold uppercase leading-tight italic">---</h2>
-    </div>
-
-    <div class="flex-1 flex flex-col min-h-0">
-        <h3 class="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3">Session Log</h3>
-        <div id="logs" class="flex-1 overflow-y-auto space-y-2 pr-2">
+    <div id="result" class="fixed inset-x-0 bottom-0 z-[100] transform translate-y-full transition-transform duration-300">
+        <div id="statusBg" class="p-8 rounded-t-[40px] shadow-2xl border-t border-white/20">
+            <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6"></div>
+            <div class="flex items-center gap-6">
+                <div id="statusIcon" class="text-5xl"></div>
+                <div>
+                    <h2 id="statusText" class="font-cinema text-4xl uppercase leading-none"></h2>
+                    <p id="movieTitle" class="text-lg font-bold text-white mt-1 uppercase"></p>
+                </div>
             </div>
-    </div>
-
-    <div id="settingsPanel" class="fixed inset-0 bg-black/95 z-[100] p-8 hidden flex-col">
-        <div class="flex justify-between items-center mb-10">
-            <h2 class="titre-app text-lg">Paramètres</h2>
-            <button onclick="toggleSettings()" class="text-4xl">&times;</button>
-        </div>
-        <div class="space-y-6">
-            <div class="flex justify-between items-center p-4 glass-panel rounded-xl">
-                <span>Vibreur</span>
-                <input type="checkbox" id="vibrateSet" checked class="accent-[#ff003c]">
+            <div class="mt-8 grid grid-cols-2 gap-4">
+                <div class="bg-black/20 p-3 rounded-xl border border-white/5">
+                    <p class="text-[8px] opacity-50 uppercase">Zone</p>
+                    <p class="text-xs font-bold">SALLE 04</p>
+                </div>
+                <div class="bg-black/20 p-3 rounded-xl border border-white/5 text-right">
+                    <p class="text-[8px] opacity-50 uppercase">Heure</p>
+                    <p id="scanTime" class="text-xs font-bold"></p>
+                </div>
             </div>
-            <div class="flex justify-between items-center p-4 glass-panel rounded-xl">
-                <span>Auto-Refresh API</span>
-                <input type="checkbox" checked class="accent-[#ff003c]">
-            </div>
-            <button onclick="clearHistory()" class="w-full p-4 border border-[#ff003c]/30 text-[#ff003c] rounded-xl font-bold uppercase text-xs">Vider l'historique</button>
         </div>
     </div>
 
-    <audio id="beepOk" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+    <div class="bg-zinc-900 p-6 grid grid-cols-2 gap-4 border-t border-white/10">
+        <button class="bg-zinc-800 p-4 rounded-2xl flex items-center justify-center gap-3 border border-white/5">
+            <span class="text-xl">🔦</span>
+            <span class="text-[10px] font-bold uppercase">Flash</span>
+        </button>
+        <button onclick="location.reload()" class="bg-zinc-800 p-4 rounded-2xl flex items-center justify-center gap-3 border border-white/5">
+            <span class="text-xl">🔄</span>
+            <span class="text-[10px] font-bold uppercase">Reset</span>
+        </button>
+    </div>
+
+    <audio id="sndOk" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+    <audio id="sndNo" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
     <script>
         const API_URL = "https://sheetdb.io/api/v1/ffd07sknkm202";
         let html5Qr;
 
-        function toggleSettings() {
-            const p = document.getElementById('settingsPanel');
-            p.classList.toggle('hidden');
-            p.classList.toggle('flex');
-        }
-
-        function addLog(movie) {
-            const logs = document.getElementById('logs');
-            const entry = document.createElement('div');
-            entry.className = "p-3 glass-panel rounded-lg flex justify-between items-center animate-in fade-in";
-            entry.innerHTML = `
-                <span class="text-[11px] font-medium truncate w-40">${movie}</span>
-                <span class="text-[9px] opacity-30">${new Date().toLocaleTimeString()}</span>
-            `;
-            logs.prepend(entry);
-        }
-
-        function clearHistory() {
-            document.getElementById('logs').innerHTML = '';
-            toggleSettings();
-        }
-
-        async function onScanSuccess(id) {
+        async function onScan(id) {
             html5Qr.pause();
-            const box = document.getElementById('resultBox');
-            const title = document.getElementById('movieTitle');
-            const vibrate = document.getElementById('vibrateSet').checked;
-
+            const resBox = document.getElementById('result');
+            const bg = document.getElementById('statusBg');
+            const txt = document.getElementById('statusText');
+            const movie = document.getElementById('movieTitle');
+            const icon = document.getElementById('statusIcon');
+            
             try {
-                const res = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(id)}`);
-                const data = await res.json();
+                const response = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(id)}`);
+                const data = await response.json();
+
+                resBox.classList.remove('translate-y-full');
+                document.getElementById('scanTime').innerText = new Date().toLocaleTimeString();
 
                 if (data.length > 0 && data[0].status === "VALIDE") {
-                    document.getElementById('beepOk').play();
-                    if(vibrate && navigator.vibrate) navigator.vibrate(200);
-                    
-                    title.innerText = data[0].movie;
-                    box.classList.remove('hidden');
-                    addLog(data[0].movie);
+                    document.getElementById('sndOk').play();
+                    bg.className = "p-8 rounded-t-[40px] shadow-2xl border-t border-white/20 bg-green-600";
+                    txt.innerText = "Ticket Valide";
+                    movie.innerText = data[0].movie;
+                    icon.innerText = "✅";
+                    if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 } else {
-                    alert("ERREUR : Ticket non identifié.");
+                    document.getElementById('sndNo').play();
+                    bg.className = "p-8 rounded-t-[40px] shadow-2xl border-t border-white/20 bg-red-600";
+                    txt.innerText = "Invalide";
+                    movie.innerText = "Accès Refusé";
+                    icon.innerText = "❌";
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { html5Qr.resume(); }
 
             setTimeout(() => {
-                box.classList.add('hidden');
+                resBox.classList.add('translate-y-full');
                 html5Qr.resume();
             }, 4000);
         }
 
         window.onload = () => {
             html5Qr = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 280 });
-            html5Qr.render(onScanSuccess);
-        }
+            html5Qr.render(onScan);
+        };
     </script>
 </body>
 </html>
