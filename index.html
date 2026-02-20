@@ -4,65 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CinéScan Terminal</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { background: #000; color: #fff; font-family: ui-sans-serif, system-ui, sans-serif; height: 100vh; overflow: hidden; }
+        body { background: #000; color: #fff; font-family: system-ui, sans-serif; height: 100vh; display: flex; flex-col; overflow: hidden; }
         #reader video { object-fit: cover !important; }
         #reader__dashboard { display: none !important; }
-        #reader__camera_selection { background: #1f2937; color: white; padding: 5px; border-radius: 5px; margin-top: 10px; }
-        .log-item { border-left: 3px solid #374151; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .drawer { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body class="flex flex-col">
 
-    <header class="p-4 bg-zinc-900 flex justify-between items-center border-b border-white/5">
+    <header class="p-5 bg-zinc-900 border-b border-white/10 flex justify-between items-center">
         <div>
-            <h1 class="font-bold text-sm tracking-widest uppercase">Scanner <span class="text-red-500">Actif</span></h1>
-            <p class="text-[10px] opacity-50">Total Scans: <span id="totalCount" class="text-white font-bold">0</span></p>
+            <h1 class="font-black text-lg tracking-tighter uppercase">Terminal <span class="text-red-600">Pro</span></h1>
+            <p class="text-[9px] opacity-40 font-bold uppercase">Entrées : <span id="counter" class="text-white">0</span></p>
         </div>
-        <button onclick="toggleSettings()" class="bg-zinc-800 p-2 rounded-lg text-xs font-bold border border-white/10 uppercase">Menu</button>
+        <div class="flex gap-2">
+            <button onclick="toggleSettings()" class="bg-zinc-800 p-2 rounded-lg text-[10px] font-bold border border-white/5 uppercase">⚙️ Menu</button>
+        </div>
     </header>
 
-    <div class="relative flex-none h-2/3 bg-black flex items-center justify-center p-4">
+    <div class="relative flex-1 bg-black overflow-hidden">
+        <div id="reader" class="w-full h-full"></div>
         <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div class="w-64 h-64 border-2 border-white/20 rounded-3xl relative">
-                <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-900 px-3 py-1 text-[8px] font-black text-red-500 border border-red-500/50 rounded uppercase">Zone de lecture</div>
-            </div>
-        </div>
-        <div id="reader" class="w-full h-full rounded-2xl overflow-hidden shadow-2xl"></div>
-    </div>
-
-    <div class="flex-1 bg-zinc-950 p-4 overflow-hidden flex flex-col">
-        <h2 class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3">Derniers passages</h2>
-        <div id="historyList" class="flex-1 overflow-y-auto space-y-2">
-            <p id="emptyMsg" class="text-[10px] text-gray-600 italic">Aucun scan enregistré pour le moment.</p>
+            <div class="w-64 h-64 border-2 border-red-600/30 rounded-3xl"></div>
         </div>
     </div>
 
-    <div id="resultOverlay" class="fixed inset-0 z-[100] hidden items-center justify-center p-6 backdrop-blur-md">
-        <div id="statusCard" class="w-full max-w-sm rounded-[32px] p-8 flex flex-col items-center text-center shadow-2xl transition-all border-4">
-            <div id="statusIcon" class="text-6xl mb-4"></div>
-            <h3 id="statusText" class="text-3xl font-black uppercase italic mb-2"></h3>
-            <p id="movieName" class="text-lg font-bold text-white uppercase"></p>
-            <div class="mt-6 w-full h-px bg-white/20"></div>
-            <p id="ticketId" class="mt-4 text-[9px] font-mono opacity-50"></p>
+    <div class="h-40 bg-zinc-950 border-t border-white/10 p-4">
+        <p class="text-[8px] font-black opacity-30 uppercase mb-3 tracking-widest">Journal des scans</p>
+        <div id="history" class="space-y-2 overflow-y-auto h-24">
+            <p id="noData" class="text-[10px] opacity-20 italic text-center mt-4">Aucun scan en mémoire</p>
         </div>
     </div>
 
-    <div id="settingsPanel" class="fixed inset-0 z-[110] bg-zinc-950 p-6 hidden flex-col">
+    <div id="overlay" class="fixed inset-0 z-[100] hidden items-end justify-center">
+        <div id="statusCard" class="drawer translate-y-full w-full p-10 rounded-t-[40px] text-center border-t-2">
+            <h2 id="statusTitle" class="text-4xl font-black uppercase italic mb-2"></h2>
+            <p id="movieName" class="text-xl font-bold text-white uppercase"></p>
+        </div>
+    </div>
+
+    <div id="settings" class="fixed inset-0 z-[200] bg-black p-8 hidden flex-col">
         <div class="flex justify-between items-center mb-10">
-            <h2 class="text-xl font-black uppercase">Réglages App</h2>
-            <button onclick="toggleSettings()" class="text-3xl">&times;</button>
+            <h2 class="text-2xl font-black uppercase">Outils</h2>
+            <button onclick="toggleSettings()" class="text-4xl">&times;</button>
         </div>
-        <div class="space-y-4">
-            <button onclick="clearHistory()" class="w-full bg-red-600/20 text-red-500 py-4 rounded-2xl font-bold uppercase text-xs border border-red-500/30 text-center">Réinitialiser le compteur</button>
-            <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center">
-                <span class="text-sm font-bold uppercase">Flash Automatique</span>
-                <div class="w-12 h-6 bg-zinc-800 rounded-full"></div>
-            </div>
-        </div>
+        <button onclick="localStorage.clear(); location.reload();" class="w-full p-4 bg-red-600/20 text-red-500 rounded-xl font-bold uppercase text-xs border border-red-500/20">Vider la mémoire du terminal</button>
     </div>
 
     <audio id="sndOk" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
@@ -70,81 +60,58 @@
 
     <script>
         const API_URL = "https://sheetdb.io/api/v1/ffd07sknkm202";
-        let scanner;
+        let html5Qr;
         let count = 0;
 
         function toggleSettings() {
-            const p = document.getElementById('settingsPanel');
-            p.classList.toggle('hidden');
-            p.classList.toggle('flex');
-        }
-
-        function clearHistory() {
-            count = 0;
-            document.getElementById('totalCount').innerText = count;
-            document.getElementById('historyList').innerHTML = '<p id="emptyMsg" class="text-[10px] text-gray-600 italic">Aucun scan enregistré.</p>';
-            toggleSettings();
-        }
-
-        function addToHistory(movie) {
-            document.getElementById('emptyMsg')?.remove();
-            const list = document.getElementById('historyList');
-            const item = document.createElement('div');
-            item.className = "log-item bg-white/5 p-3 rounded-lg flex justify-between items-center";
-            item.innerHTML = `
-                <span class="text-[11px] font-bold uppercase truncate w-40 text-white">${movie}</span>
-                <span class="text-[9px] opacity-40 font-mono">${new Date().toLocaleTimeString()}</span>
-            `;
-            list.prepend(item);
-            count++;
-            document.getElementById('totalCount').innerText = count;
+            const s = document.getElementById('settings');
+            s.classList.toggle('hidden'); s.classList.toggle('flex');
         }
 
         async function onScan(id) {
-            scanner.pause();
-            const overlay = document.getElementById('resultOverlay');
+            html5Qr.pause();
+            const ov = document.getElementById('overlay');
             const card = document.getElementById('statusCard');
-            const statusText = document.getElementById('statusText');
-            const movieText = document.getElementById('movieName');
-            const icon = document.getElementById('statusIcon');
-            const tid = document.getElementById('ticketId');
-
+            
             try {
-                const response = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(id)}`);
-                const data = await response.json();
-
-                overlay.classList.remove('hidden');
-                overlay.classList.add('flex');
-                tid.innerText = id;
+                const res = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(id)}`);
+                const data = await res.json();
+                
+                ov.classList.remove('hidden');
+                ov.classList.add('flex');
+                setTimeout(() => card.classList.remove('translate-y-full'), 10);
 
                 if (data.length > 0 && data[0].status === "VALIDE") {
                     document.getElementById('sndOk').play();
-                    card.className = "w-full max-w-sm rounded-[32px] p-8 flex flex-col items-center text-center shadow-2xl transition-all border-4 bg-zinc-900 border-green-500";
-                    statusText.innerText = "Autorisé";
-                    statusText.className = "text-3xl font-black uppercase text-green-500 mb-2 italic";
-                    movieText.innerText = data[0].movie;
-                    icon.innerText = "✅";
-                    addToHistory(data[0].movie);
+                    card.className = "drawer w-full p-10 rounded-t-[40px] text-center border-t-2 bg-green-600 border-green-400";
+                    document.getElementById('statusTitle').innerText = "AUTORISÉ";
+                    document.getElementById('movieName').innerText = data[0].movie;
+                    
+                    // Ajout à l'historique réel
+                    document.getElementById('noData')?.remove();
+                    const log = document.createElement('div');
+                    log.className = "flex justify-between bg-white/5 p-2 rounded text-[10px] border-l-2 border-green-500";
+                    log.innerHTML = `<span>${data[0].movie}</span><span class="opacity-30">${new Date().toLocaleTimeString()}</span>`;
+                    document.getElementById('history').prepend(log);
+                    count++;
+                    document.getElementById('counter').innerText = count;
                 } else {
                     document.getElementById('sndNo').play();
-                    card.className = "w-full max-w-sm rounded-[32px] p-8 flex flex-col items-center text-center shadow-2xl transition-all border-4 bg-zinc-900 border-red-500";
-                    statusText.innerText = "Refusé";
-                    statusText.className = "text-3xl font-black uppercase text-red-500 mb-2 italic";
-                    movieText.innerText = "Billet non reconnu";
-                    icon.innerText = "❌";
+                    card.className = "drawer w-full p-10 rounded-t-[40px] text-center border-t-2 bg-red-600 border-red-400";
+                    document.getElementById('statusTitle').innerText = "REFUSÉ";
+                    document.getElementById('movieName').innerText = "TICKET INVALIDE";
                 }
-            } catch (e) { scanner.resume(); }
+            } catch (e) { html5Qr.resume(); }
 
             setTimeout(() => {
-                overlay.classList.add('hidden');
-                overlay.classList.remove('flex');
-                scanner.resume();
+                card.classList.add('translate-y-full');
+                setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('flex'); html5Qr.resume(); }, 400);
             }, 3000);
         }
 
         window.onload = () => {
-            scanner = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 250 });
-            scanner.render(onScan);
+            html5Qr = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 250 });
+            html5Qr.render(onScan);
         };
     </script>
 </body>
