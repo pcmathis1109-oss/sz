@@ -3,137 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CinéScan PRO</title>
+    <title>CinéScan TERMINAL</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root { --primary: #ff3333; --bg: #0a0a0a; }
+        :root { --matrix-green: #00ff41; --bg-black: #050505; }
         body { 
-            font-family: 'Segoe UI', Roboto, sans-serif; 
-            background-color: var(--bg); color: white; margin: 0; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden;
+            font-family: 'Consolas', 'Courier New', monospace; 
+            background-color: var(--bg-black); color: var(--matrix-green); 
+            margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* Design En-tête */
-        .header { position: absolute; top: 40px; text-align: center; width: 100%; z-index: 10; }
-        .header h1 { font-size: 26px; letter-spacing: 3px; text-transform: uppercase; margin: 0; font-weight: 900; }
-        .header span { color: var(--primary); }
+        /* Console du haut */
+        #terminal-header { padding: 10px; border-bottom: 1px solid var(--matrix-green); font-size: 12px; background: #000; }
         
-        #status-container { margin-top: 10px; font-size: 13px; font-weight: 300; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        #status-dot { height: 10px; width: 10px; background-color: #444; border-radius: 50%; transition: 0.3s; box-shadow: 0 0 5px rgba(255,255,255,0.1); }
+        /* Zone Scanner */
+        .scan-zone { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; background: #000; }
+        #reader { width: 300px; height: 300px; border: 1px solid var(--matrix-green); }
+        .laser { position: absolute; width: 300px; height: 2px; background: var(--matrix-green); box-shadow: 0 0 15px var(--matrix-green); z-index: 10; animation: move 2s infinite linear; }
+        @keyframes move { 0% { top: calc(50% - 150px); } 100% { top: calc(50% + 150px); } }
 
-        /* Conteneur du Scanner */
-        .scanner-container { position: relative; width: 85%; max-width: 380px; aspect-ratio: 1/1; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); background: #000; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        #reader { width: 100% !important; border: none !important; }
-        #reader video { object-fit: cover !important; }
-
-        /* Viseur Style Cinéma */
-        .corner { position: absolute; width: 35px; height: 35px; border: 4px solid var(--primary); z-index: 20; }
-        .top-left { top: 20px; left: 20px; border-right: none; border-bottom: none; border-top-left-radius: 15px; }
-        .top-right { top: 20px; right: 20px; border-left: none; border-bottom: none; border-top-right-radius: 15px; }
-        .bottom-left { bottom: 20px; left: 20px; border-right: none; border-top: none; border-bottom-left-radius: 15px; }
-        .bottom-right { bottom: 20px; right: 20px; border-left: none; border-top: none; border-bottom-right-radius: 15px; }
-
-        .scan-line {
-            position: absolute; width: 100%; height: 4px; background: linear-gradient(to bottom, transparent, var(--primary));
-            box-shadow: 0 0 20px var(--primary); top: 0; z-index: 15; animation: scan 2s ease-in-out infinite;
+        /* Console de logs réels */
+        #real-logs { 
+            height: 150px; background: #000; border-top: 1px solid var(--matrix-green); 
+            padding: 10px; font-size: 11px; overflow-y: auto; color: #00ff41;
         }
-        @keyframes scan { 0% { top: 10%; } 50% { top: 90%; } 100% { top: 10%; } }
+        .log-entry { margin-bottom: 3px; border-left: 3px solid var(--matrix-green); padding-left: 5px; }
+        .timestamp { color: #888; margin-right: 10px; }
 
-        /* Bouton Action */
-        #start-btn {
-            background: var(--primary); color: white; border: none; padding: 20px 60px;
-            font-size: 16px; font-weight: bold; border-radius: 15px; cursor: pointer;
-            box-shadow: 0 10px 30px rgba(255, 51, 51, 0.4); z-index: 100; text-transform: uppercase; letter-spacing: 1px;
+        /* Bouton */
+        #init-btn { 
+            position: absolute; z-index: 100; padding: 20px; background: var(--matrix-green); 
+            color: black; border: none; font-weight: bold; cursor: pointer;
         }
-        #start-btn:active { transform: scale(0.98); }
 
-        #result-text { position: absolute; bottom: 60px; font-size: 14px; color: #888; width: 80%; text-align: center; font-style: italic; }
+        /* Alerte Succès Rapide */
+        #flash { 
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background: rgba(0,255,65,0.2); display:none; pointer-events: none; z-index: 200;
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>CINÉ<span>SCAN</span> PRO</h1>
-        <div id="status-container"><span id="status-dot"></span> <span id="status-text">PRÊT POUR CONTRÔLE</span></div>
+    <div id="terminal-header">
+        [ SYSTEM VERSION 1.0.4 ]<br>
+        [ STATUS: CONNECTED TO GOOGLE_API ]
     </div>
 
-    <button id="start-btn">Démarrer le Scan</button>
-
-    <div class="scanner-container" id="scanner-box" style="display:none;">
-        <div id="reader"></div>
-        <div class="scan-line"></div>
-        <div class="corner top-left"></div>
-        <div class="corner top-right"></div>
-        <div class="corner bottom-left"></div>
-        <div class="corner bottom-right"></div>
+    <div class="scan-zone">
+        <button id="init-btn">RUN CINEMATICKET.EXE</button>
+        <div id="reader" style="display:none;"></div>
+        <div id="laser-line" class="laser" style="display:none;"></div>
     </div>
 
-    <div id="result-text">Veuillez scanner un ticket VIP</div>
+    <div id="real-logs">
+        <div class="log-entry">> Initialisation du noyau...</div>
+    </div>
+
+    <div id="flash"></div>
 
     <script>
-        const startBtn = document.getElementById('start-btn');
-        const scannerBox = document.getElementById('scanner-box');
-        const statusDot = document.getElementById('status-dot');
-        const statusText = document.getElementById('status-text');
-        const resultText = document.getElementById('result-text');
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQv5Pj1rnhQcBaerKsWCYateY_ZP793WuDO1QfNaiaLP_IcODG9pkmh1O7-BQegjTu/exec";
+        const logBox = document.getElementById('real-logs');
 
-        // TON LIEN GOOGLE SHEETS DÉJÀ INTÉGRÉ
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQv5Pj1rnhQcBaerKsWCYateY_ZP793WuDO1QfNaiaLP_IcODG9pkmh1O7-BQegjTu/exec"; 
+        function printLog(msg) {
+            const now = new Date();
+            const time = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+            const div = document.createElement('div');
+            div.className = "log-entry";
+            div.innerHTML = `<span class="timestamp">[${time}]</span> ${msg}`;
+            logBox.appendChild(div);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
 
-        async function startScanner() {
+        document.getElementById('init-btn').addEventListener('click', async () => {
+            document.getElementById('init-btn').style.display = 'none';
+            document.getElementById('reader').style.display = 'block';
+            document.getElementById('laser-line').style.display = 'block';
+            
+            printLog("Demande d'accès Hardware: CAMERA...");
+            
             try {
-                // Demande autorisation caméra
-                await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                
-                startBtn.style.display = 'none';
-                scannerBox.style.display = 'block';
-
                 const html5QrCode = new Html5Qrcode("reader");
-                const config = { fps: 25, qrbox: { width: 250, height: 250 } };
-
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
-                    config,
-                    (decodedText) => {
-                        handleScan(decodedText);
-                    }
+                    { fps: 20, qrbox: 250 },
+                    (text) => executeTransfer(text)
                 );
+                printLog("Capteur optique : ONLINE");
+            } catch (e) {
+                printLog("ERREUR CRITIQUE: " + e);
+            }
+        });
+
+        async function executeTransfer(ticketID) {
+            printLog("PAQUET DÉTECTÉ: " + ticketID);
+            
+            // On flashe l'écran
+            document.getElementById('flash').style.display = 'block';
+            setTimeout(() => document.getElementById('flash').style.display = 'none', 200);
+
+            if (navigator.vibrate) navigator.vibrate(50);
+
+            printLog("REQUÊTE HTTP POST -> GOOGLE SHEETS...");
+            
+            const start = Date.now();
+            
+            try {
+                // Ici c'est le VRAI envoi
+                const response = await fetch(SCRIPT_URL + "?id=" + encodeURIComponent(ticketID));
+                const end = Date.now();
+                
+                printLog(`TRANSMISSION RÉUSSIE (${end - start}ms)`);
+                printLog(`DATABASE_UPDATE: SUCCESS`);
             } catch (err) {
-                alert("Erreur Caméra : Assurez-vous d'être en HTTPS et d'autoriser l'accès.");
+                printLog("ERREUR RÉSEAU: ÉCHEC DE L'ENVOI");
             }
         }
-
-        function handleScan(ticketID) {
-            // Vibration (uniquement Android)
-            if (navigator.vibrate) navigator.vibrate(200);
-            
-            statusDot.style.backgroundColor = "#f39c12";
-            statusText.innerText = "VÉRIFICATION...";
-            resultText.innerText = "Lecture : " + ticketID;
-
-            // Envoi des données vers Google Sheets
-            fetch(GOOGLE_SCRIPT_URL + "?id=" + encodeURIComponent(ticketID))
-                .then(() => {
-                    statusDot.style.backgroundColor = "#2ecc71";
-                    statusDot.style.boxShadow = "0 0 15px #2ecc71";
-                    statusText.innerText = "TICKET ACCEPTÉ";
-                    resultText.innerText = "ID " + ticketID + " enregistré.";
-                    
-                    // Réinitialisation après 2 secondes pour le prochain ticket
-                    setTimeout(() => {
-                        statusDot.style.backgroundColor = "#444";
-                        statusDot.style.boxShadow = "none";
-                        statusText.innerText = "PRÊT POUR CONTRÔLE";
-                    }, 2500);
-                })
-                .catch(() => {
-                    statusDot.style.backgroundColor = "#ff3333";
-                    statusText.innerText = "ERREUR RÉSEAU";
-                    alert("Problème de connexion au tableau Sheets.");
-                });
-        }
-
-        startBtn.addEventListener('click', startScanner);
     </script>
 </body>
 </html>
