@@ -3,71 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Terminal CinéScan</title>
+    <title>CinéScan Terminal Pro</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&display=swap');
         
-        body { background: #000; color: #fff; font-family: 'Roboto Condensed', sans-serif; height: 100vh; overflow: hidden; }
-        
-        /* Look industriel du scanner */
-        #reader video { object-fit: cover !important; filter: brightness(1.1) contrast(1.2); }
+        body { background: #000; color: #fff; font-family: ui-sans-serif, system-ui; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .font-cinema { font-family: 'Barlow Condensed', sans-serif; }
+
+        /* Scanner Styling */
+        #reader video { object-fit: cover !important; }
         #reader__dashboard { display: none !important; }
         
-        /* Animation laser rouge pro */
-        .laser { position: absolute; width: 100%; height: 3px; background: #ff0000; box-shadow: 0 0 15px #ff0000; z-index: 50; animation: scan 2.5s infinite alternate; }
-        @keyframes scan { from { top: 0% } to { top: 100% } }
+        /* Laser Animation */
+        .laser-line {
+            position: absolute; width: 100%; height: 2px; background: #ff0000;
+            box-shadow: 0 0 10px #ff0000; z-index: 50; animation: scanMove 2s infinite alternate;
+        }
+        @keyframes scanMove { from { top: 0% } to { top: 100% } }
 
-        .btn-industrial { background: #1a1a1a; border: 1px solid #333; transition: all 0.2s; }
-        .btn-industrial:active { background: #333; transform: scale(0.95); }
+        .status-drawer { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="flex flex-col">
+<body class="bg-black text-white">
 
-    <header class="p-4 bg-zinc-900 border-b-2 border-red-600 flex justify-between items-center">
+    <header class="p-4 bg-zinc-900 border-b border-white/10 flex justify-between items-center">
         <div>
-            <h1 class="text-xl tracking-tighter uppercase leading-none">Terminal <span class="text-red-600">Scan A1</span></h1>
-            <p id="totalCount" class="text-[10px] text-zinc-500 font-bold mt-1 uppercase">Entrées : 0</p>
+            <h1 class="font-cinema text-2xl tracking-tighter leading-none">TERMINAL <span class="text-red-600">KDV-8</span></h1>
+            <p class="text-[9px] font-bold opacity-40 uppercase tracking-widest">Contrôle Accès VIP</p>
         </div>
-        <div class="text-right">
-            <span id="clock" class="text-sm font-bold opacity-80">00:00:00</span>
+        <div class="bg-black/40 px-3 py-1 rounded border border-white/5 text-right">
+            <p class="text-[8px] opacity-50 uppercase">Entrées</p>
+            <p id="counter" class="text-xs font-bold text-red-500">0</p>
         </div>
     </header>
 
-    <main class="flex-1 relative bg-black flex items-center justify-center p-6">
-        <div class="relative w-72 h-72 border-2 border-white/10 rounded-xl overflow-hidden shadow-2xl">
-            <div class="laser"></div>
+    <main class="flex-1 relative bg-black flex items-center justify-center">
+        <div class="relative w-64 h-64 border-2 border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+            <div class="laser-line"></div>
             <div id="reader" class="w-full h-full"></div>
         </div>
-        
-        <div class="absolute w-80 h-80 pointer-events-none border border-white/5 rounded-3xl"></div>
+        <div class="absolute inset-0 pointer-events-none border-[20px] border-black/60"></div>
     </main>
 
-    <div class="h-32 bg-zinc-900/50 p-4 border-t border-white/10 overflow-hidden">
-        <h2 class="text-[9px] text-zinc-500 uppercase tracking-widest mb-2 font-black">Flux de contrôle</h2>
-        <div id="historyList" class="space-y-1 overflow-y-auto h-20 text-[11px]">
-            <p class="opacity-20 italic">En attente de scan...</p>
+    <section class="h-44 bg-zinc-950 p-4 border-t border-white/10 overflow-hidden flex flex-col">
+        <h2 class="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-2">Logs Terminal</h2>
+        <div id="logList" class="flex-1 overflow-y-auto space-y-1 text-[11px] font-mono">
+            <p class="opacity-20 italic">Initialisation système...</p>
         </div>
-    </div>
+    </section>
 
-    <footer class="p-4 bg-zinc-900 grid grid-cols-2 gap-4">
-        <button onclick="toggleFlash()" class="btn-industrial py-4 rounded-xl flex flex-col items-center">
-            <span class="text-lg">🔦</span>
-            <span class="text-[9px] uppercase font-bold mt-1">Éclairage</span>
-        </button>
-        <button onclick="clearLogs()" class="btn-industrial py-4 rounded-xl flex flex-col items-center">
-            <span class="text-lg">🗑️</span>
-            <span class="text-[9px] uppercase font-bold mt-1">Reset</span>
-        </button>
-    </footer>
-
-    <div id="overlay" class="fixed inset-0 z-[100] hidden items-center justify-center p-8 backdrop-blur-xl">
-        <div id="card" class="w-full p-10 rounded-[40px] text-center shadow-2xl border-4 transform transition-all duration-300">
-            <div id="icon" class="text-7xl mb-4"></div>
-            <h2 id="msg" class="text-4xl font-black uppercase italic leading-none mb-2"></h2>
-            <p id="movie" class="text-lg font-bold opacity-90 uppercase tracking-tighter"></p>
+    <div id="overlay" class="fixed inset-0 z-[100] hidden items-end justify-center bg-black/40 backdrop-blur-sm">
+        <div id="drawer" class="status-drawer translate-y-full w-full p-10 rounded-t-[40px] text-center border-t-2 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+            <div id="statusIcon" class="text-6xl mb-2"></div>
+            <h2 id="statusTitle" class="font-cinema text-5xl uppercase italic leading-none mb-1"></h2>
+            <p id="movieLabel" class="text-lg font-bold text-white uppercase tracking-tight"></p>
+            <p id="ticketRef" class="text-[9px] opacity-40 font-mono mt-4"></p>
         </div>
     </div>
 
@@ -75,71 +68,77 @@
     <audio id="sndNo" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
     <script>
-        const API_URL = "https://sheetdb.io/api/v1/ffd07sknkm202";
-        let html5Qr;
+        const API_URL = "https://sheetdb.io/api/v1/kdv8n5flmxfd9";
+        let scanner;
         let count = 0;
 
-        function updateClock() {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
-        }
-        setInterval(updateClock, 1000);
-
-        function clearLogs() {
-            count = 0;
-            document.getElementById('totalCount').innerText = "Entrées : 0";
-            document.getElementById('historyList').innerHTML = '<p class="opacity-20 italic">Historique effacé.</p>';
-        }
-
-        async function onScan(id) {
-            html5Qr.pause();
+        async function onScanSuccess(decodedText) {
+            scanner.pause();
             const ov = document.getElementById('overlay');
-            const cr = document.getElementById('card');
-            
+            const dr = document.getElementById('drawer');
+            const title = document.getElementById('statusTitle');
+            const movie = document.getElementById('movieLabel');
+            const icon = document.getElementById('statusIcon');
+            const logs = document.getElementById('logList');
+
             try {
-                const res = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(id)}`);
-                const data = await res.json();
-                
+                const response = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(decodedText)}`);
+                const data = await response.json();
+
                 ov.classList.remove('hidden');
                 ov.classList.add('flex');
+                setTimeout(() => dr.classList.remove('translate-y-full'), 20);
 
                 if (data.length > 0 && data[0].status === "VALIDE") {
+                    // RÉUSSITE
                     document.getElementById('sndOk').play();
-                    // VIBRATION RÉELLE (1 vibration longue)
-                    if (navigator.vibrate) navigator.vibrate(200);
-
-                    cr.className = "w-full p-10 rounded-[40px] text-center shadow-2xl border-4 bg-green-600 border-green-400";
-                    document.getElementById('msg').innerText = "VALIDE";
-                    document.getElementById('movie').innerText = data[0].movie;
-                    document.getElementById('icon').innerText = "✅";
+                    if(navigator.vibrate) navigator.vibrate(200); // Vibration simple
                     
-                    // Update historique
+                    dr.className = "status-drawer w-full p-10 rounded-t-[40px] text-center border-t-2 bg-green-600 border-green-400";
+                    title.innerText = "ACCÈS VALIDE";
+                    movie.innerText = data[0].movie;
+                    icon.innerText = "✅";
+                    
+                    // Historique
                     count++;
-                    document.getElementById('totalCount').innerText = "Entrées : " + count;
-                    const h = document.getElementById('historyList');
-                    if(count === 1) h.innerHTML = "";
-                    h.innerHTML = `<div class='border-l-2 border-green-500 pl-2 mb-1 uppercase font-bold'>${data[0].movie}</div>` + h.innerHTML;
+                    document.getElementById('counter').innerText = count;
+                    const logEntry = document.createElement('div');
+                    logEntry.className = "bg-green-500/10 text-green-500 p-2 rounded border-l-2 border-green-500 flex justify-between";
+                    logEntry.innerHTML = `<span>OK: ${data[0].movie}</span><span>${new Date().toLocaleTimeString()}</span>`;
+                    logs.prepend(logEntry);
+
                 } else {
+                    // ÉCHEC
                     document.getElementById('sndNo').play();
-                    // VIBRATION RÉELLE (3 vibrations courtes d'erreur)
-                    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+                    if(navigator.vibrate) navigator.vibrate([100, 50, 100]); // Triple vibration
+                    
+                    dr.className = "status-drawer w-full p-10 rounded-t-[40px] text-center border-t-2 bg-red-600 border-red-400";
+                    title.innerText = "REFUSÉ";
+                    movie.innerText = "BILLET INCONNU";
+                    icon.innerText = "❌";
 
-                    cr.className = "w-full p-10 rounded-[40px] text-center shadow-2xl border-4 bg-red-600 border-red-400";
-                    document.getElementById('msg').innerText = "REFUSÉ";
-                    document.getElementById('movie').innerText = "TICKET INVALIDE";
-                    document.getElementById('icon').innerText = "❌";
+                    const logEntry = document.createElement('div');
+                    logEntry.className = "bg-red-500/10 text-red-500 p-2 rounded border-l-2 border-red-500";
+                    logEntry.innerText = `ERREUR: Ticket ${decodedText}`;
+                    logs.prepend(logEntry);
                 }
-            } catch (e) { html5Qr.resume(); }
+                document.getElementById('ticketRef').innerText = "ID: " + decodedText;
 
+            } catch (err) {
+                console.error(err);
+                scanner.resume();
+            }
+
+            // Fermeture auto après 3 secondes
             setTimeout(() => {
-                ov.classList.add('hidden');
-                ov.classList.remove('flex');
-                html5Qr.resume();
+                dr.classList.add('translate-y-full');
+                setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('flex'); scanner.resume(); }, 400);
             }, 3000);
         }
 
         window.onload = () => {
-            html5Qr = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 250 });
-            html5Qr.render(onScan);
+            scanner = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 250 });
+            scanner.render(onScanSuccess);
         };
     </script>
 </body>
