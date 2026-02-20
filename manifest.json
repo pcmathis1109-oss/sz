@@ -1,7 +1,7 @@
 {
-  "name": "CinéScan Pro Elite",
+  "name": "CinéScan Terminal Pro",
   "short_name": "CinéScan",
-  "start_url": "scanner.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
