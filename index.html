@@ -3,105 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CinéScan PRO</title>
+    <title>CinéScan ULTIMATE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <link rel="manifest" href="manifest.json">
     <style>
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-        .scan-line { animation: scan 2s linear infinite; shadow: 0 0 15px #ff0000; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        
+        body { font-family: 'Orbitron', sans-serif; background: #000; overflow: hidden; }
+        
+        /* Animation du laser de scan */
+        @keyframes scan-moving { 0% { top: 0% } 100% { top: 100% } }
+        .laser { animation: scan-moving 2s linear infinite; background: linear-gradient(to bottom, transparent, #ff0000, transparent); height: 4px; position: absolute; width: 100%; z-index: 30; box-shadow: 0 0 15px #ff0000; }
+
+        /* Effet de grille sur l'écran */
+        .grid-overlay { background-image: radial-gradient(circle, #ffffff10 1px, transparent 1px); background-size: 20px 20px; }
+        
         #reader__dashboard { display: none !important; }
-        #reader video { object-fit: cover !important; border-radius: 30px; }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
+        #reader video { object-fit: cover !important; filter: contrast(1.2) brightness(1.1); }
+        
+        .status-pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
-<body class="bg-[#050505] text-white h-screen flex flex-col overflow-hidden">
+<body class="text-white h-screen flex flex-col">
 
-    <div class="pt-12 pb-4 px-6 flex justify-between items-center bg-black/40 backdrop-blur-md border-b border-white/5">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 text-xl font-black italic">C</div>
-            <div>
-                <h1 class="text-sm font-black tracking-widest uppercase italic">CinéScan <span class="text-red-600">PRO</span></h1>
-                <p class="text-[8px] text-gray-500 font-bold uppercase tracking-[0.2em]">Contrôle Accès</p>
+    <div class="fixed inset-0 pointer-events-none z-40 border-[20px] border-white/5"></div>
+
+    <header class="p-8 flex justify-between items-start z-50">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="w-3 h-3 bg-red-600 rounded-full status-pulse"></span>
+                <h1 class="text-xl font-black tracking-[0.3em] uppercase">CinéScan <span class="text-red-600">PRO</span></h1>
+            </div>
+            <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Terminal ID : CS-892-X</p>
+        </div>
+        <div class="text-right">
+            <div id="clock" class="text-sm font-bold text-red-600 mb-1"></div>
+            <div class="text-[8px] text-green-500 border border-green-500/30 px-2 py-0.5 rounded-full bg-green-500/5">SYNC : LIVE CLOUD</div>
+        </div>
+    </header>
+
+    <main class="flex-1 relative flex items-center justify-center">
+        <div class="relative w-72 h-72">
+            <div class="absolute -top-4 -left-4 w-12 h-12 border-t-2 border-l-2 border-red-600 z-50"></div>
+            <div class="absolute -top-4 -right-4 w-12 h-12 border-t-2 border-r-2 border-red-600 z-50"></div>
+            <div class="absolute -bottom-4 -left-4 w-12 h-12 border-b-2 border-l-2 border-red-600 z-50"></div>
+            <div class="absolute -bottom-4 -right-4 w-12 h-12 border-b-2 border-r-2 border-red-600 z-50"></div>
+            
+            <div id="reader" class="w-full h-full rounded-2xl overflow-hidden grayscale contrast-125 bg-zinc-900 border border-white/10 relative">
+                <div class="laser"></div>
             </div>
         </div>
-        <div class="px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10 flex items-center gap-2">
-            <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-            <span class="text-[8px] font-bold text-green-500 uppercase">Live</span>
-        </div>
-    </div>
-
-    <main class="flex-1 relative flex flex-col items-center justify-center p-8">
-        <div class="relative w-full max-w-xs">
-            <div class="absolute -top-2 -left-2 w-8 h-8 border-t-4 border-l-4 border-red-600 z-10 rounded-tl-xl"></div>
-            <div class="absolute -top-2 -right-2 w-8 h-8 border-t-4 border-r-4 border-red-600 z-10 rounded-tr-xl"></div>
-            <div class="absolute -bottom-2 -left-2 w-8 h-8 border-b-4 border-l-4 border-red-600 z-10 rounded-bl-xl"></div>
-            <div class="absolute -bottom-2 -right-2 w-8 h-8 border-b-4 border-r-4 border-red-600 z-10 rounded-br-xl"></div>
-            <div id="reader" class="w-full aspect-square rounded-[30px] overflow-hidden bg-zinc-900 border border-white/10 relative">
-                <div class="scan-line absolute left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent z-20"></div>
-            </div>
-        </div>
-        <p class="mt-12 text-gray-500 text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Visez un ticket</p>
     </main>
 
-    <div id="fullOverlay" class="fixed inset-0 z-50 flex flex-col items-center justify-center hidden backdrop-blur-3xl transition-all duration-500">
-        <div id="statusCard" class="glass w-[85%] p-10 rounded-[40px] flex flex-col items-center text-center shadow-2xl scale-90 transition-transform duration-500">
-            <div id="iconBox" class="text-8xl mb-6"></div>
-            <h1 id="mainStatus" class="text-4xl font-black uppercase italic tracking-tighter"></h1>
-            <p id="movieName" class="mt-4 text-lg font-medium opacity-80 uppercase"></p>
+    <div id="resultOverlay" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center backdrop-blur-md">
+        <div id="resultCard" class="w-[85%] max-w-sm p-8 rounded-3xl border-2 transition-transform duration-500 scale-90">
+            <div class="text-[10px] uppercase tracking-widest font-bold mb-4 opacity-50">Résultat du contrôle</div>
+            <h2 id="resultTitle" class="text-4xl font-black italic mb-2"></h2>
+            <div class="h-px bg-white/20 my-6"></div>
+            <div class="space-y-4">
+                <div>
+                    <p class="text-[8px] uppercase opacity-50">Film identifié</p>
+                    <p id="resultMovie" class="text-lg font-bold uppercase"></p>
+                </div>
+                <div>
+                    <p class="text-[8px] uppercase opacity-50">Ticket ID</p>
+                    <p id="resultId" class="text-xs font-mono"></p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <audio id="beepOk" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
-    <audio id="beepError" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
+    <audio id="sndOk" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+    <audio id="sndNo" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
     <script>
         const API_URL = "https://sheetdb.io/api/v1/ffd07sknkm202";
-        let html5QrcodeScanner;
+        let scanner;
 
-        async function onScanSuccess(decodedText) {
-            const overlay = document.getElementById('fullOverlay');
-            const card = document.getElementById('statusCard');
-            const icon = document.getElementById('iconBox');
-            const status = document.getElementById('mainStatus');
-            const movie = document.getElementById('movieName');
-            
-            html5QrcodeScanner.pause();
+        // Horloge temps réel
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0') + ":" + now.getSeconds().toString().padStart(2, '0');
+        }, 1000);
+
+        async function handleScan(decodedText) {
+            scanner.pause();
+            const overlay = document.getElementById('resultOverlay');
+            const card = document.getElementById('resultCard');
             
             try {
                 const response = await fetch(`${API_URL}/search?ticket_id=${encodeURIComponent(decodedText)}`);
                 const data = await response.json();
+
                 overlay.classList.remove('hidden');
                 setTimeout(() => card.classList.remove('scale-90'), 50);
 
                 if (data.length > 0 && data[0].status === "VALIDE") {
-                    overlay.style.backgroundColor = "rgba(22, 101, 52, 0.9)";
-                    icon.innerText = "✅";
-                    status.innerText = "VALIDE";
-                    status.className = "text-4xl font-black text-green-400";
-                    movie.innerText = data[0].movie;
-                    document.getElementById('beepOk').play();
+                    // SUCCÈS
+                    card.className = "w-[85%] max-w-sm p-8 rounded-3xl border-2 bg-green-950/90 border-green-400 text-green-400 shadow-[0_0_50px_rgba(34,197,94,0.3)]";
+                    document.getElementById('resultTitle').innerText = "AUTORISÉ";
+                    document.getElementById('resultMovie').innerText = data[0].movie;
+                    document.getElementById('resultId').innerText = decodedText;
+                    document.getElementById('sndOk').play();
                 } else {
-                    overlay.style.backgroundColor = "rgba(153, 27, 27, 0.9)";
-                    icon.innerText = "❌";
-                    status.innerText = "REFUSÉ";
-                    status.className = "text-4xl font-black text-red-500";
-                    movie.innerText = "TICKET INVALIDE";
-                    document.getElementById('beepError').play();
+                    // ÉCHEC
+                    card.className = "w-[85%] max-w-sm p-8 rounded-3xl border-2 bg-red-950/90 border-red-500 text-red-500 shadow-[0_0_50px_rgba(239,68,68,0.3)]";
+                    document.getElementById('resultTitle').innerText = "REFUSÉ";
+                    document.getElementById('resultMovie').innerText = "BILLET INCONNU";
+                    document.getElementById('resultId').innerText = "INVALID_HASH";
+                    document.getElementById('sndNo').play();
                 }
-            } catch (e) { html5QrcodeScanner.resume(); }
+            } catch (e) { scanner.resume(); }
 
             setTimeout(() => {
-                card.classList.add('scale-90');
                 overlay.classList.add('hidden');
-                html5QrcodeScanner.resume();
-            }, 3000);
+                card.classList.add('scale-90');
+                scanner.resume();
+            }, 4000);
         }
 
         window.onload = () => {
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 30, qrbox: 250 });
-            html5QrcodeScanner.render(onScanSuccess);
-        }
+            scanner = new Html5QrcodeScanner("reader", { fps: 60, qrbox: 250 });
+            scanner.render(handleScan);
+        };
     </script>
 </body>
 </html>
